@@ -17,19 +17,46 @@ For Ollie:
 </head>
 
 <body>
-    <h1>Game</h1>
-    <canvas width="500" height="500"></canvas>
+    <main>
+        <canvas id="canvas" width="500" height="500"></canvas> <!-- TODO: Move width and height to CSS -->
+
+        <div id="chat">
+            <div id="chat-box"></div>
+            <form id="chat-form" action="" autocomplete="off">
+                <input id="chat-input" type="text">
+            </form>
+        </div>
+    </main>
 </body>
 
 <script>
-    const canvas = document.querySelector('canvas');
+    const canvas = document.querySelector('#canvas');
     const ctx = canvas.getContext("2d");
+
+    const chatBox = document.querySelector('#chat-box');
+    const chatForm = document.querySelector('#chat-form');
+    const chatInput = document.querySelector('#chat-input');
 
     ctx.font = '30px Arial';
 
     const socket = io();
 
-    socket.on('updatePositions', function (positions) { // { players: [{id: x: y:}], bullets: [{x: y:}] }
+    socket.on('addToChat', (message) => {
+        chatBox.innerHTML += `<div>${message}</div>`;
+    });
+
+    socket.on('addToConsole', (result) => {
+        console.log(result);
+    });
+
+    chatForm.onsubmit = (event) => {
+        event.preventDefault();
+        if (chatInput.value[0] === '/') socket.emit('debug', chatInput.value.slice(1));
+        else socket.emit('sendToChat', chatInput.value);
+        chatInput.value = '';
+    }
+
+    socket.on('drawPositions', (positions) => { // { players: [{id: x: y:}], bullets: [{x: y:}] }
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         for (let i = 0; i < positions.players.length; i++) {
@@ -43,7 +70,7 @@ For Ollie:
         }
     });
 
-    document.onkeydown = function (event) {
+    document.onkeydown = (event) => {
         switch (event.keyCode) {
             case 87: socket.emit('keyPress', { key: 'up', state: true }); break;
             case 83: socket.emit('keyPress', { key: 'down', state: true }); break;
@@ -52,7 +79,7 @@ For Ollie:
         }
     }
 
-    document.onkeyup = function (event) {
+    document.onkeyup = (event) => {
         switch (event.keyCode) {
             case 87: socket.emit('keyPress', { key: 'up', state: false }); break;
             case 83: socket.emit('keyPress', { key: 'down', state: false }); break;

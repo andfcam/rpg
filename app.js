@@ -13,7 +13,7 @@ const SOCKET_LIST = {}; // {[id: socket, id: socket, id: socket]}
 const fps = 50;
 
 http.listen(2000, function () {
-    console.log("Server started");
+    console.log("Server started.");
 });
 
 class Entity {
@@ -68,7 +68,9 @@ Player.list = {}; // // { [id: {player} ] }
 Player.onConnect = (socket) => {
     const player = new Player(socket.id);
 
-    console.log('User connected');
+    console.log(`User ${socket.id} connected.`);
+
+    socket.emit('addToChat', `Hi, ${player.id}. Welcome to the game.`);
 
     socket.on('keyPress', function (event) {
         switch (event.key) {
@@ -83,7 +85,7 @@ Player.onConnect = (socket) => {
 Player.onDisconnect = (socket) => {
     delete Player.list[socket.id];
 
-    console.log('User disconnected');
+    console.log(`User ${socket.id} disconnected.`);
 }
 
 Player.update = () => {
@@ -139,11 +141,24 @@ Bullet.update = () => {
     return positions;
 }
 
+const DEBUG = true;
+
 io.on('connection', function (socket) {
     socket.id = Math.floor(100 * Math.random()); // TODO: Make id equal to user id
     SOCKET_LIST[socket.id] = socket;
 
     Player.onConnect(socket);
+
+    socket.on('sendToChat', (message) => {
+        for (const id in SOCKET_LIST) {
+            SOCKET_LIST[id].emit('addToChat', `${socket.id}: ${message}`);
+        }
+    });
+
+    socket.on('debug', (message) => { // TODO: Remove debug function or sanitise input
+        if (!DEBUG) return;
+        socket.emit('addToConsole', eval(message));
+    });
 
     socket.on('disconnect', function () {
         Player.onDisconnect(socket);
@@ -158,7 +173,6 @@ const interval = setInterval(function () {
     }
 
     for (const id in SOCKET_LIST) {
-        const socket = SOCKET_LIST[id];
-        socket.emit('updatePositions', positions);
+        SOCKET_LIST[id].emit('drawPositions', positions);
     }
 }, 1000 / fps);
