@@ -1,1 +1,14 @@
-Hello world
+Hello world!
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    const socket = io();
+
+    const sendMsg = () => {
+        socket.emit('msg', {
+            message: "Boo"
+        });
+    }
+
+    sendMsg();
+</script>
