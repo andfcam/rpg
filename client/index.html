@@ -29,6 +29,24 @@
             ctx.fillText(player.id, player.x, player.y);
         });
     });
+
+    document.onkeydown = function (event) {
+        switch (event.keyCode) {
+            case 87: socket.emit('keyPress', { key: 'up', state: true }); break;
+            case 83: socket.emit('keyPress', { key: 'down', state: true }); break;
+            case 65: socket.emit('keyPress', { key: 'left', state: true }); break;
+            case 68: socket.emit('keyPress', { key: 'right', state: true }); break;
+        }
+    }
+
+    document.onkeyup = function (event) {
+        switch (event.keyCode) {
+            case 87: socket.emit('keyPress', { key: 'up', state: false }); break;
+            case 83: socket.emit('keyPress', { key: 'down', state: false }); break;
+            case 65: socket.emit('keyPress', { key: 'left', state: false }); break;
+            case 68: socket.emit('keyPress', { key: 'right', state: false }); break;
+        }
+    }
 </script>
 
 </html>
