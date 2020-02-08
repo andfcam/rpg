@@ -1,3 +1,9 @@
+<!-- 
+For Ollie:
+    1. Run through my use of super, understand exactly how to use it with inheritance
+    2. How to identify when I need a new class
+-->
+
 <html lang="en">
 
 <head>
@@ -23,11 +29,18 @@
 
     const socket = io();
 
-    socket.on('playerPositions', function (players) {
+    socket.on('updatePositions', function (positions) { // { players: [{id: x: y:}], bullets: [{x: y:}] }
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        players.forEach(player => {
+
+        for (let i = 0; i < positions.players.length; i++) {
+            const player = positions.players[i];
             ctx.fillText(player.id, player.x, player.y);
-        });
+        }
+
+        for (let i = 0; i < positions.bullets.length; i++) {
+            const bullet = positions.bullets[i];
+            ctx.fillRect(bullet.x - 5, bullet.y - 5, 10, 10);
+        }
     });
 
     document.onkeydown = function (event) {
