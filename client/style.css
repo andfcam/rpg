@@ -2,25 +2,96 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: Arial, Helvetica, sans-serif;
-    /* border: 1px solid black; */
+    font-family: 'Inter', sans-serif;
 }
 
-canvas {
-    background-color: lightgray;
-}
-
-input {
+main {
+    display: flex;
     width: 100%;
-    height: 2em;
+    min-height: 100vh;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    background: #C9D6FF;
+    background: -webkit-linear-gradient(to left, #E2E2E2, #C9D6FF);
+    background: linear-gradient(to left, #E2E2E2, #C9D6FF);
+}
+
+button {
+    cursor: pointer;
+}
+
+a {
+    cursor: pointer;
+}
+
+#login {
+    background: white;
+    width: 480px;
+    border-radius: 10px;
+    padding: 80px;
+    text-align: center;
+}
+
+#login h1 {
+    font-size: 40px;
+    font-weight: 900;
+    padding-bottom: 35px;
+}
+
+#login button {
+    width: 100%;
+    height: 50px;
+    margin: 5px 0 50px 0;
+    background: slateblue;
+    border: none;
+    border-radius: 25px;
+    color: white;
+    /* text-transform: uppercase; */
+    font-size: 16px;
+    font-weight: 600;
+}
+
+#login input {
+    width: 100%;
+    height: 50px;
+    margin: 5px 0;
+    background: #E7E7E7;
+    border: none;
+    border-radius: 25px;
+    padding: 0 20px;
+    font-size: 16px;
+}
+
+#login p {
+    padding-bottom: 5px;
+    font-style: italic;
+}
+
+#login a {
+    color: slateblue;
+    font-weight: 600;
+}
+
+#game canvas {
+    background: #E2E2E2;
 }
 
 #chat {
     width: 500px;
 }
 
+#chat input {
+    width: 100%;
+    height: 2em;
+}
+
 #chat-box {
-    min-height: 200px;
+    height: 200px;
     border: 1px solid black;
     overflow-y: scroll;
+}
+
+.hidden {
+    display: none;
 }

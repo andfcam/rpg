@@ -1,7 +1,7 @@
 const express = require('express');
 const app = express();
 
-app.get('/', function (req, res) {
+app.get('/', (req, res) => {
     res.sendFile(__dirname + '/client/index.html');
 });
 app.use('/client', express.static(__dirname + '/client'));
@@ -12,7 +12,7 @@ const io = require('socket.io')(http);
 const SOCKET_LIST = {}; // {[id: socket, id: socket, id: socket]}
 const fps = 50;
 
-http.listen(2000, function () {
+http.listen(2000, () => {
     console.log("Server started.");
 });
 
@@ -86,7 +86,7 @@ Player.onConnect = (socket) => {
 
     socket.emit('addToChat', `Hi, ${player.id}. Welcome to the game.`);
 
-    socket.on('keyPress', function (event) {
+    socket.on('keyPress', (event) => {
         switch (event.action) {
             case 'up': player.pressingUp = event.value; break;
             case 'down': player.pressingDown = event.value; break;
@@ -99,7 +99,7 @@ Player.onConnect = (socket) => {
 }
 
 Player.onDisconnect = (socket) => {
-    delete Player.list[socket.id];
+    delete Player.list[socket.id]; // TODO: Player disconnects even if never connected (logged in)
 
     console.log(`User ${socket.id} disconnected.`);
 }
@@ -168,12 +168,50 @@ Bullet.update = () => {
 }
 
 const DEBUG = true;
+const USERS = {
+    "Andy": "admin",
+    "Guest": "123"
+};
 
-io.on('connection', function (socket) {
+// Note: interacting with database is asynchronous -> callback
+const isValidPassword = (data, callback) => {
+    setTimeout(() => { callback(USERS[data.username] === data.password); }, 10);
+};
+
+const isUsernameTaken = (data, callback) => {
+    setTimeout(() => { callback(USERS[data.username]); }, 10);
+}
+
+const addUser = (data, callback) => {
+    setTimeout(() => { USERS[data.username] = data.password; callback(); }, 10);
+}
+
+io.on('connection', (socket) => {
     socket.id = Math.floor(100 * Math.random()); // TODO: Make id equal to user id
     SOCKET_LIST[socket.id] = socket;
 
-    Player.onConnect(socket);
+    socket.on('signIn', (data) => {
+        isValidPassword(data, (res) => {
+            if (res) {
+                Player.onConnect(socket);
+                socket.emit('signInResponse', { success: true });
+            } else {
+                socket.emit('signInResponse', { success: false });
+            }
+        });
+    });
+
+    socket.on('signUp', (data) => {
+        isUsernameTaken(data, (res) => {
+            if (res) {
+                socket.emit('signUpResponse', { success: false });
+            } else {
+                addUser(data, () => {
+                    socket.emit('signUpResponse', { success: true });
+                });
+            }
+        });
+    });
 
     socket.on('sendToChat', (message) => {
         for (const id in SOCKET_LIST) {
@@ -186,13 +224,13 @@ io.on('connection', function (socket) {
         socket.emit('addToConsole', eval(message));
     });
 
-    socket.on('disconnect', function () {
+    socket.on('disconnect', () => {
         Player.onDisconnect(socket);
         delete SOCKET_LIST[socket.id];
     });
 });
 
-const interval = setInterval(function () {
+const interval = setInterval(() => {
     const positions = {
         players: Player.update(),
         bullets: Bullet.update()
