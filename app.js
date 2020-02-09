@@ -33,6 +33,8 @@ class Entity {
         this.x += this.speedX;
         this.y += this.speedY;
     }
+
+    getDistance(object) { return Math.hypot(this.x - object.x, this.y - object.y); }
 }
 
 class Player extends Entity {
@@ -43,6 +45,8 @@ class Player extends Entity {
         this.pressingDown = false;
         this.pressingLeft = false;
         this.pressingRight = false;
+        this.pressingAttack = false;
+        this.mouseAngle = 0;
 
         Player.list[this.id] = this;
     }
@@ -50,6 +54,10 @@ class Player extends Entity {
     update() {
         this.updateSpeed();
         super.update();
+        if (this.pressingAttack) {
+            // for (let i = -1; i <= 1; i++) this.shootBullet(i * 10 + this.mouseAngle); // 3-pronged attack
+            this.shootBullet(this.mouseAngle);
+        }
     }
 
     updateSpeed() {
@@ -60,6 +68,12 @@ class Player extends Entity {
         if (this.pressingLeft) this.speedX = -this.maxSpeed;
         else if (this.pressingRight) this.speedX = this.maxSpeed;
         else this.speedX = 0;
+    }
+
+    shootBullet(angle) {
+        const bullet = new Bullet(this.id, angle);
+        bullet.x = this.x;
+        bullet.y = this.y;
     }
 }
 
@@ -73,11 +87,13 @@ Player.onConnect = (socket) => {
     socket.emit('addToChat', `Hi, ${player.id}. Welcome to the game.`);
 
     socket.on('keyPress', function (event) {
-        switch (event.key) {
-            case 'up': player.pressingUp = event.state; break;
-            case 'down': player.pressingDown = event.state; break;
-            case 'left': player.pressingLeft = event.state; break;
-            case 'right': player.pressingRight = event.state; break;
+        switch (event.action) {
+            case 'up': player.pressingUp = event.value; break;
+            case 'down': player.pressingDown = event.value; break;
+            case 'left': player.pressingLeft = event.value; break;
+            case 'right': player.pressingRight = event.value; break;
+            case 'attack': player.pressingAttack = event.value; break;
+            case 'aim': player.mouseAngle = event.value; break;
         }
     });
 }
@@ -105,10 +121,11 @@ Player.update = () => {
 }
 
 class Bullet extends Entity {
-    constructor(angle) {
+    constructor(parentId, angle) {
         super(Math.random()); // id
         this.speedX = Math.cos(angle / 180 * Math.PI) * 10;
         this.speedY = Math.sin(angle / 180 * Math.PI) * 10;
+        this.parentId = parentId;
 
         this.timer = 0;
         // this.toRemove = false;
@@ -117,16 +134,25 @@ class Bullet extends Entity {
     }
 
     update() {
-        if (this.timer++ > 100) delete Bullet.list[this.id];
+        if (this.timer++ > 100) this.remove();
+        for (const id in Player.list) {
+            const player = Player.list[id];
+            if (this.getDistance(player) < 30 && this.parentId !== player.id) {
+                // handle collision ie hp--;
+                this.remove();
+            }
+        }
         super.update();
+    }
+
+    remove() {
+        delete Bullet.list[this.id];
     }
 }
 
 Bullet.list = {}; // { [id: {bullet} ] }
 
 Bullet.update = () => {
-    if (Math.random() < 0.05) new Bullet(Math.random() * 360);
-
     let positions = [];
 
     for (const id in Bullet.list) {
