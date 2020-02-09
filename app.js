@@ -1,3 +1,6 @@
+const mongojs = require('mongojs');
+const db = mongojs('mongodb+srv://Admin:KWwIrPRC09RjK3wt@a67-gqim1.mongodb.net/myGame?retryWrites=true&w=majority', ['account', 'progress']);
+
 const express = require('express');
 const app = express();
 
@@ -168,22 +171,26 @@ Bullet.update = () => {
 }
 
 const DEBUG = true;
-const USERS = {
-    "Andy": "admin",
-    "Guest": "123"
-};
 
 // Note: interacting with database is asynchronous -> callback
 const isValidPassword = (data, callback) => {
-    setTimeout(() => { callback(USERS[data.username] === data.password); }, 10);
+    db.account.find({ username: data.username, password: data.password }, (err, res) => {
+        if (res.length > 0) callback(true);
+        else callback(false);
+    });
 };
 
 const isUsernameTaken = (data, callback) => {
-    setTimeout(() => { callback(USERS[data.username]); }, 10);
+    db.account.find({ username: data.username }, (err, res) => {
+        if (res.length > 0) callback(true);
+        else callback(false);
+    });
 }
 
 const addUser = (data, callback) => {
-    setTimeout(() => { USERS[data.username] = data.password; callback(); }, 10);
+    db.account.insert({ username: data.username, password: data.password }, (err) => {
+        callback();
+    });
 }
 
 io.on('connection', (socket) => {
