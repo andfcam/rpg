@@ -50,19 +50,17 @@ class Player extends Entity {
         this.pressingRight = false;
         this.pressingAttack = false;
         this.mouseAngle = 0;
+        this.hp = 10;
+        this.maxHp = 10;
+        this.score = 0;
 
-        this.init();        
+        this.init();
     }
 
     init() {
         Player.list[this.id] = this;
 
-        initPack.players.push({
-            id: player.id,
-            x: player.x,
-            y: player.y,
-            // and other initial information such as sprite
-        });
+        initPack.players.push(this.getInitPack());
     }
 
     update() {
@@ -89,6 +87,30 @@ class Player extends Entity {
         bullet.x = this.x;
         bullet.y = this.y;
     }
+
+    getInitPack() {
+        return {
+            id: this.id,
+            x: this.x,
+            y: this.y,
+            hp: this.hp,
+            maxHp: this.maxHp,
+            score: this.score,
+            // and other initial information such as sprite
+        }
+    }
+
+    getUpdatePack() {
+        // TODO: Check if value has changed before sending info
+        // TODO: Compression?
+        return {
+            id: this.id,
+            x: this.x,
+            y: this.y,
+            hp: this.hp,
+            score: this.score
+        }
+    }
 }
 
 Player.list = {}; // // { [id: {player} ] }
@@ -110,11 +132,24 @@ Player.onConnect = (socket) => {
             case 'aim': player.mouseAngle = event.value; break;
         }
     });
+
+    socket.emit('init', {
+        players: Player.getInitPack(),
+        bullets: Bullet.getInitPack()
+    });
+}
+
+Player.getInitPack = () => {
+    let players = [];
+    for (const id in Player.list) {
+        players.push(Player.list[id].getInitPack());
+    }
+    return players;
 }
 
 Player.onDisconnect = (socket) => {
+    removePack.players.push({ id: socket.id });
     delete Player.list[socket.id]; // TODO: Player disconnects even if never connected (logged in)
-    removePack.players.push(socket.id);
 
     console.log(`User ${socket.id} disconnected.`);
 }
@@ -125,11 +160,7 @@ Player.update = () => {
     for (const id in Player.list) {
         const player = Player.list[id];
         player.update();
-        positions.push({
-            id: player.id,
-            x: player.x,
-            y: player.y
-        });
+        positions.push(player.getUpdatePack());
     }
 
     return positions;
@@ -150,11 +181,7 @@ class Bullet extends Entity {
     init() {
         Bullet.list[this.id] = this;
 
-        initPack.bullets.push({
-            id: bullet.id,
-            x: bullet.x,
-            y: bullet.y
-        });
+        initPack.bullets.push(this.getInitPack());
     }
 
     update() {
@@ -162,7 +189,15 @@ class Bullet extends Entity {
         for (const id in Player.list) {
             const player = Player.list[id];
             if (this.getDistance(player) < 30 && this.parentId !== player.id) {
-                // handle collision ie hp--;
+                player.hp--;
+
+                if (player.hp <= 0) {
+                    const shooter = Player.list[this.parent];
+                    if (shooter) shooter.score++;
+                    player.hp = player.maxHp;
+                    player.x = Math.random() * 500;
+                    player.y = Math.random() * 500;
+                }
                 this.remove();
             }
         }
@@ -170,12 +205,37 @@ class Bullet extends Entity {
     }
 
     remove() {
+        removePack.bullets.push({ id: this.id });
         delete Bullet.list[this.id];
-        removePack.bullets.push(this.id);
+    }
+
+    getInitPack() {
+        return {
+            id: this.id,
+            x: this.x,
+            y: this.y,
+            // and other initial information such as sprite
+        }
+    }
+
+    getUpdatePack() {
+        return {
+            id: this.id,
+            x: this.x,
+            y: this.y
+        }
     }
 }
 
 Bullet.list = {}; // { [id: {bullet} ] }
+
+Bullet.getInitPack = () => {
+    let bullets = [];
+    for (const id in Bullet.list) {
+        bullets.push(Bullet.list[id].getInitPack());
+    }
+    return bullets;
+}
 
 Bullet.update = () => {
     let positions = [];
@@ -183,11 +243,7 @@ Bullet.update = () => {
     for (const id in Bullet.list) {
         const bullet = Bullet.list[id];
         bullet.update();
-        positions.push({
-            id: bullet.id,
-            x: bullet.x,
-            y: bullet.y
-        });
+        positions.push(bullet.getUpdatePack());
     }
 
     return positions;

@@ -6,7 +6,7 @@ For Ollie:
         Should I call / move the function up the hierarchy? Should I pass the player id down the tree?
     3. Firebase over MongoDB? When do we cover Firebase? How in depth in terms of libraries etc?
     4. Make sure I better understand callback functions and synchronous / asynchronous.
-    5. Player and Bullet classes on client-side or as objects?
+    5. Player and Bullet classes on client-side or as objects with self?
 -->
 
 <html lang="en">
@@ -114,6 +114,18 @@ For Ollie:
             this.id = initPack.id;
             this.x = initPack.x;
             this.y = initPack.y;
+            this.hp = initPack.hp;
+            this.maxHp = initPack.maxHp;
+            this.score = initPack.score;
+        }
+
+        draw() {
+            // TODO: Remove hard-coded values
+            const hpWidth = 30 * this.hp / this.maxHp;
+            ctx.fillStyle = "red";
+            ctx.fillRect(this.x - hpWidth / 2, this.y - 30, hpWidth, 4);
+            ctx.fillStyle = "black";
+            ctx.fillText(this.id, this.x - 15, this.y + 10);
         }
     }
 
@@ -122,6 +134,10 @@ For Ollie:
             this.id = initPack.id;
             this.x = initPack.x;
             this.y = initPack.y;
+        }
+
+        draw() {
+            ctx.fillRect(this.x - 5, this.y - 5, 10, 10);
         }
     }
 
@@ -135,10 +151,13 @@ For Ollie:
 
     socket.on('update', (data) => { // { players: [{player}, {player}], bullets: [{bullet}, {bullet}] }
         data.players.forEach(object => {
+            // TODO: Decompression?
             const player = Player.list[object.id];
             if (player) {
                 if (object.x !== undefined) player.x = object.x;
                 if (object.y !== undefined) player.y = object.y;
+                if (object.hp !== undefined) player.hp = object.hp;
+                if (object.score !== undefined) player.score = object.score;
             }
         });
 
@@ -160,13 +179,11 @@ For Ollie:
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         for (const id in Player.list) {
-            const player = Player.list[id];
-            ctx.fillText(player.id, player.x, player.y);
+            Player.list[id].draw();
         }
 
         for (const id in Bullet.list) {
-            const bullet = Bullet.list[id];
-            ctx.fillRect(bullet.x - 5, bullet.y - 5, 10, 10);
+            Bullet.list[id].draw();
         }
     }, 1000 / fps);
 
