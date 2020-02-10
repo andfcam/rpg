@@ -51,7 +51,18 @@ class Player extends Entity {
         this.pressingAttack = false;
         this.mouseAngle = 0;
 
+        this.init();        
+    }
+
+    init() {
         Player.list[this.id] = this;
+
+        initPack.players.push({
+            id: player.id,
+            x: player.x,
+            y: player.y,
+            // and other initial information such as sprite
+        });
     }
 
     update() {
@@ -103,6 +114,7 @@ Player.onConnect = (socket) => {
 
 Player.onDisconnect = (socket) => {
     delete Player.list[socket.id]; // TODO: Player disconnects even if never connected (logged in)
+    removePack.players.push(socket.id);
 
     console.log(`User ${socket.id} disconnected.`);
 }
@@ -131,9 +143,18 @@ class Bullet extends Entity {
         this.parentId = parentId;
 
         this.timer = 0;
-        // this.toRemove = false;
 
+        this.init();
+    }
+
+    init() {
         Bullet.list[this.id] = this;
+
+        initPack.bullets.push({
+            id: bullet.id,
+            x: bullet.x,
+            y: bullet.y
+        });
     }
 
     update() {
@@ -150,6 +171,7 @@ class Bullet extends Entity {
 
     remove() {
         delete Bullet.list[this.id];
+        removePack.bullets.push(this.id);
     }
 }
 
@@ -162,6 +184,7 @@ Bullet.update = () => {
         const bullet = Bullet.list[id];
         bullet.update();
         positions.push({
+            id: bullet.id,
             x: bullet.x,
             y: bullet.y
         });
@@ -237,13 +260,27 @@ io.on('connection', (socket) => {
     });
 });
 
+let initPack = { players: [], bullets: [] };
+let removePack = { players: [], bullets: [] };
+
+const emptyPacks = () => {
+    initPack = { players: [], bullets: [] };
+    removePack = { players: [], bullets: [] };
+}
+
 const interval = setInterval(() => {
-    const positions = {
+    const updatePack = {
         players: Player.update(),
         bullets: Bullet.update()
     }
 
     for (const id in SOCKET_LIST) {
-        SOCKET_LIST[id].emit('drawPositions', positions);
+        SOCKET_LIST[id].emit('init', initPack); // TODO: Emit 'init' and 'remove' on event, not interval
+        SOCKET_LIST[id].emit('update', updatePack);
+        SOCKET_LIST[id].emit('remove', removePack);
     }
+
+    emptyPacks();
 }, 1000 / fps);
+
+

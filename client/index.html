@@ -6,6 +6,7 @@ For Ollie:
         Should I call / move the function up the hierarchy? Should I pass the player id down the tree?
     3. Firebase over MongoDB? When do we cover Firebase? How in depth in terms of libraries etc?
     4. Make sure I better understand callback functions and synchronous / asynchronous.
+    5. Player and Bullet classes on client-side or as objects?
 -->
 
 <html lang="en">
@@ -16,11 +17,6 @@ For Ollie:
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
     <link rel="stylesheet" href="/client/style.css">
-    <script src="/__/firebase/7.8.1/firebase-app.js"></script>
-    <!-- TODO: Add SDKs for Firebase products that you want to use
-         https://firebase.google.com/docs/web/setup#available-libraries -->
-    <script src="/__/firebase/7.8.1/firebase-analytics.js"></script>
-    <script src="/__/firebase/init.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
     <title>Game</title>
 </head>
@@ -51,8 +47,9 @@ For Ollie:
 
 <script>
     const socket = io();
+    const fps = 50; // TODO: Client and server both require fps (or can be different values - only used for draw on client-side)
 
-    // Login
+    // login
 
     const login = document.querySelector('#login');
     const username = document.querySelector('#username');
@@ -79,24 +76,15 @@ For Ollie:
 
     socket.on('signUpResponse', (data) => {
         if (data.success) alert("Sign-up was successful."); // TODO: Modify element on page to display message
-        else alert("Sign-up was unsuccessful."); 
+        else alert("Sign-up was unsuccessful.");
     });
 
-    // Game
 
-    const canvas = document.querySelector('#canvas');
-    const ctx = canvas.getContext("2d");
+    // chat
 
-    const game = document.querySelector('#game');
     const chatBox = document.querySelector('#chat-box');
     const chatForm = document.querySelector('#chat-form');
     const chatInput = document.querySelector('#chat-input');
-
-    ctx.font = '30px Arial';
-
-    socket.on('signInResponse', (data) => {
-        if (data.success) game.classList.toggle('hidden');
-    });
 
     socket.on('addToChat', (message) => {
         chatBox.innerHTML += `<div>${message}</div>`;
@@ -113,18 +101,78 @@ For Ollie:
         chatInput.value = '';
     }
 
-    socket.on('drawPositions', (positions) => { // { players: [{id: x: y:}], bullets: [{x: y:}] }
+
+    // game
+
+    const game = document.querySelector('#game');
+    const canvas = document.querySelector('#canvas');
+    const ctx = canvas.getContext("2d");
+    ctx.font = '30px Arial';
+
+    class Player {
+        constructor(initPack) {
+            this.id = initPack.id;
+            this.x = initPack.x;
+            this.y = initPack.y;
+        }
+    }
+
+    class Bullet {
+        constructor(initPack) {
+            this.id = initPack.id;
+            this.x = initPack.x;
+            this.y = initPack.y;
+        }
+    }
+
+    Player.list = {};
+    Bullet.list = {};
+
+    socket.on('init', (data) => { // { players: [{player}, {player}], bullets: [{bullet}, {bullet}] }
+        data.players.forEach(object => { Player.list[object.id] = new Player(object); });
+        data.bullets.forEach(object => { Bullet.list[object.id] = new Bullet(object); });
+    });
+
+    socket.on('update', (data) => { // { players: [{player}, {player}], bullets: [{bullet}, {bullet}] }
+        data.players.forEach(object => {
+            const player = Player.list[object.id];
+            if (player) {
+                if (object.x !== undefined) player.x = object.x;
+                if (object.y !== undefined) player.y = object.y;
+            }
+        });
+
+        data.bullets.forEach(object => {
+            const bullet = Bullet.list[object.id];
+            if (bullet) {
+                if (object.x !== undefined) bullet.x = object.x;
+                if (object.y !== undefined) bullet.y = object.y;
+            }
+        });
+    });
+
+    socket.on('remove', (data) => { // { players: [{player}, {player}], bullets: [{bullet}, {bullet}] }
+        data.players.forEach(object => { delete Player.list[object.id]; });
+        data.bullets.forEach(object => { delete Bullet.list[object.id]; });
+    });
+
+    const interval = setInterval(() => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        for (let i = 0; i < positions.players.length; i++) {
-            const player = positions.players[i];
+        for (const id in Player.list) {
+            const player = Player.list[id];
             ctx.fillText(player.id, player.x, player.y);
         }
 
-        for (let i = 0; i < positions.bullets.length; i++) {
-            const bullet = positions.bullets[i];
+        for (const id in Bullet.list) {
+            const bullet = Bullet.list[id];
             ctx.fillRect(bullet.x - 5, bullet.y - 5, 10, 10);
         }
+    }, 1000 / fps);
+
+    // here because it's associated with game, not login
+    socket.on('signInResponse', (data) => {
+        if (data.success) game.classList.toggle('hidden');
     });
 
     document.onkeydown = (event) => {
