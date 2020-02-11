@@ -134,6 +134,7 @@ Player.onConnect = (socket) => {
     });
 
     socket.emit('init', {
+        self: socket.id,
         players: Player.getInitPack(),
         bullets: Bullet.getInitPack()
     });
@@ -192,7 +193,7 @@ class Bullet extends Entity {
                 player.hp--;
 
                 if (player.hp <= 0) {
-                    const shooter = Player.list[this.parent];
+                    const shooter = Player.list[this.parentId];
                     if (shooter) shooter.score++;
                     player.hp = player.maxHp;
                     player.x = Math.random() * 500;
