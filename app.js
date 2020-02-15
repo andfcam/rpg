@@ -83,9 +83,7 @@ class Player extends Entity {
     }
 
     shootBullet(angle) {
-        const bullet = new Bullet(this.id, angle);
-        bullet.x = this.x;
-        bullet.y = this.y;
+        const bullet = new Bullet(this.id, this.x, this.y, angle);
     }
 
     getInitPack() {
@@ -95,7 +93,7 @@ class Player extends Entity {
             y: this.y,
             hp: this.hp,
             maxHp: this.maxHp,
-            score: this.score,
+            score: this.score
             // and other initial information such as sprite
         }
     }
@@ -111,6 +109,8 @@ class Player extends Entity {
             score: this.score
         }
     }
+
+    static functionexample() { }
 }
 
 Player.list = {}; // // { [id: {player} ] }
@@ -168,8 +168,10 @@ Player.update = () => {
 }
 
 class Bullet extends Entity {
-    constructor(parentId, angle) {
+    constructor(parentId, x, y, angle) {
         super(Math.random()); // id
+        this.x = x;
+        this.y = y;
         this.speedX = Math.cos(angle / 180 * Math.PI) * 10;
         this.speedY = Math.sin(angle / 180 * Math.PI) * 10;
         this.parentId = parentId;

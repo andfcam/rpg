@@ -1,12 +1,7 @@
 <!-- 
-For Ollie:
-    1. Run through my use of super.
-    2a. How to track data that I have available in OOP. Do I have access to this? What can I pass here?
-    2b. Hierarchy. I'm 3 levels deep in Bullet, I know need a player id. How do I approach this problem? 
-        Should I call / move the function up the hierarchy? Should I pass the player id down the tree?
-    3. Firebase over MongoDB? When do we cover Firebase? How in depth in terms of libraries etc?
-    4. Make sure I better understand callback functions and synchronous / asynchronous.
-    5. Player and Bullet classes on client-side or as objects with self?
+From Ollie:
+    1. Write class.functions as static functions inside.
+    2. Change callback functions to promises (look up how to write) -> function.then
 -->
 
 <html lang="en">
@@ -46,6 +41,8 @@ For Ollie:
 </body>
 
 <script>
+    const WIDTH = 500;
+    const HEIGHT = 500;
     const socket = io();
     const fps = 50; // TODO: Client and server both require fps (or can be different values - only used for draw on client-side)
 
@@ -127,14 +124,18 @@ For Ollie:
         }
 
         draw() {
+            const width = Img.player.width;
+            const height = Img.player.height;
+
+            const x = this.x - Player.list[selfId].x + WIDTH / 2;
+            const y = this.y - Player.list[selfId].y + HEIGHT / 2;
+
             // TODO: Remove hard-coded values
             const hpWidth = 30 * this.hp / this.maxHp;
             ctx.fillStyle = "red";
-            ctx.fillRect(this.x - hpWidth / 2, this.y - 30, hpWidth, 4);
+            ctx.fillRect(x - hpWidth / 2, y - 30, hpWidth, 4);
 
-            const width = Img.player.width;
-            const height = Img.player.height;
-            ctx.drawImage(Img.player, 0, 0, Img.player.width, Img.player.height, this.x - width / 2, this.y - height / 2, width, height);
+            ctx.drawImage(Img.player, 0, 0, Img.player.width, Img.player.height, x - width / 2, y - height / 2, width, height);
         }
     }
 
@@ -148,7 +149,11 @@ For Ollie:
         draw() {
             const width = Img.bullet.width / 2;
             const height = Img.bullet.height / 2;
-            ctx.drawImage(Img.bullet, 0, 0, Img.bullet.width, Img.bullet.height, this.x - width / 2, this.y - height / 2, width, height);
+
+            const x = this.x - Player.list[selfId].x + WIDTH / 2;
+            const y = this.y - Player.list[selfId].y + HEIGHT / 2;
+
+            ctx.drawImage(Img.bullet, 0, 0, Img.bullet.width, Img.bullet.height, x - width / 2, y - height / 2, width, height);
         }
     }
 
@@ -190,13 +195,15 @@ For Ollie:
     });
 
     const interval = setInterval(() => {
+        if (!selfId) return;
+
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         drawMap();
         drawScore();
 
         for (const id in Player.list) {
             Player.list[id].draw();
-        }d
+        }
 
         for (const id in Bullet.list) {
             Bullet.list[id].draw();
@@ -204,7 +211,10 @@ For Ollie:
     }, 1000 / fps);
 
     const drawMap = () => {
-        ctx.drawImage(Img.map, 0, 0);
+        const x = WIDTH / 2 - Player.list[selfId].x;
+        const y = HEIGHT / 2 - Player.list[selfId].y;
+
+        ctx.drawImage(Img.map, x, y);
     }
 
     const drawScore = () => {
