@@ -17,6 +17,10 @@ main {
     background: linear-gradient(to left, #E2E2E2, #C9D6FF);
 }
 
+canvas {
+    position: absolute;
+}
+
 button {
     cursor: pointer;
 }
@@ -75,12 +79,18 @@ a {
     font-weight: 600;
 }
 
-#game canvas {
+#display {
+    position: relative;
+    height: 500px;
+}
+
+#canvas {
     background: #E2E2E2;
 }
 
 #chat {
     width: 500px;
+    position: relative;
 }
 
 #chat input {

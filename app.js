@@ -12,6 +12,9 @@ app.use('/client', express.static(__dirname + '/client'));
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
 
+// const profiler = require('v8-profiler-node8');
+// const fs = require('fs');
+
 const SOCKET_LIST = {}; // {[id: socket, id: socket, id: socket]}
 const fps = 50;
 
@@ -19,12 +22,13 @@ http.listen(process.env.PORT || 2000);
 console.log("Server started.");
 
 class Entity {
-    constructor(id) {
-        this.id = id;
-        this.x = 250;
-        this.y = 250;
-        this.speedX = 0;
-        this.speedY = 0;
+    constructor(data) {
+        this.id = data.id;
+        this.x = data.x || 250;
+        this.y = data.y || 250;
+        this.speedX = data.speedX || 0;
+        this.speedY = data.speedY || 0;
+        this.map = data.map || 'village';
     }
 
     update() {
@@ -40,8 +44,8 @@ class Entity {
 }
 
 class Player extends Entity {
-    constructor(id) {
-        super(id);
+    constructor(data) {
+        super({ id: data.id, map: data.map });
         this.maxSpeed = 5;
         this.pressingUp = false;
         this.pressingDown = false;
@@ -82,7 +86,7 @@ class Player extends Entity {
     }
 
     shootBullet(angle) {
-        const bullet = new Bullet(this.id, this.x, this.y, angle);
+        const bullet = new Bullet({ parentId: this.id, x: this.x, y: this.y, angle: angle, map: this.map });
     }
 
     getInitPack() {
@@ -92,7 +96,8 @@ class Player extends Entity {
             y: this.y,
             hp: this.hp,
             maxHp: this.maxHp,
-            score: this.score
+            score: this.score,
+            map: this.map
             // and other initial information such as sprite
         }
     }
@@ -109,13 +114,16 @@ class Player extends Entity {
         }
     }
 
-    static functionexample() { }
+    static functionExample() { }
 }
 
+// TODO: Player and bullet lists are only populated with people in same map (and vicinity later)
 Player.list = {}; // // { [id: {player} ] }
 
 Player.onConnect = (socket) => {
-    const player = new Player(socket.id);
+    let map = 'village';
+    if (Math.random() < 0.5) map = 'alt';
+    const player = new Player({ id: socket.id, map: map });
 
     console.log(`User ${socket.id} connected.`);
 
@@ -167,14 +175,18 @@ Player.update = () => {
 }
 
 class Bullet extends Entity {
-    constructor(parentId, x, y, angle) {
-        super(Math.random()); // id
-        this.x = x;
-        this.y = y;
-        this.speedX = Math.cos(angle / 180 * Math.PI) * 10;
-        this.speedY = Math.sin(angle / 180 * Math.PI) * 10;
-        this.parentId = parentId;
+    constructor(data) {
+        super({
+            id: Math.random(),
+            x: data.x,
+            y: data.y,
+            speedX: Math.cos(data.angle / 180 * Math.PI) * 10,
+            speedY: Math.sin(data.angle / 180 * Math.PI) * 10,
+            map: data.map
+        });
 
+        this.angle = data.angle;
+        this.parentId = data.parentId;
         this.timer = 0;
 
         this.init();
@@ -190,7 +202,7 @@ class Bullet extends Entity {
         if (this.timer++ > 100) this.remove();
         for (const id in Player.list) {
             const player = Player.list[id];
-            if (this.getDistance(player) < 30 && this.parentId !== player.id) {
+            if (this.parentId !== player.id && this.map === player.map && this.getDistance(player) < 30) {
                 player.hp--;
 
                 if (player.hp <= 0) {
@@ -216,6 +228,7 @@ class Bullet extends Entity {
             id: this.id,
             x: this.x,
             y: this.y,
+            map: this.map
             // and other initial information such as sprite
         }
     }
@@ -341,4 +354,16 @@ const interval = setInterval(() => {
     emptyPacks();
 }, 1000 / fps);
 
+const startProfiling = (duration) => {
+    profiler.startProfiling('1', true);
+    setTimeout(() => {
+        const profile1 = profiler.stopProfiling('1');
 
+        profile1.export((err, res) => {
+            fs.writeFileSync('./profile.cpuprofile', res);
+            profile1.delete();
+            console.log('Profile saved.');
+        });
+    }, duration);
+}
+// startProfiling(15000);

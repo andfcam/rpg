@@ -12,7 +12,8 @@
     "socket.io": "^2.3.0"
   },
   "devDependencies": {
-    "nodemon": "^2.0.2"
+    "nodemon": "^2.0.2",
+    "v8-profiler-node8": "^6.1.1"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",

@@ -1,7 +1,11 @@
 <!-- 
-From Ollie:
     1. Write class.functions as static functions inside.
     2. Change callback functions to promises (look up how to write) -> function.then
+-->
+
+<!-- 
+    Drawing text on canvas very expensive 
+    Look further into profiling
 -->
 
 <html lang="en">
@@ -28,7 +32,10 @@ From Ollie:
         </div>
 
         <div id="game" class="hidden">
-            <canvas id="canvas" width="500" height="500"></canvas> <!-- TODO: Move width and height to CSS -->
+            <div id="display">
+                <canvas id="canvas" width="500" height="500"></canvas> <!-- TODO: Move width and height to CSS -->
+                <canvas id="ui" width="500" height="500"></canvas> <!-- TODO: Move width and height to CSS -->
+            </div>
 
             <div id="chat">
                 <div id="chat-box"></div>
@@ -105,13 +112,18 @@ From Ollie:
     Img.player.src = '/client/img/player.png';
     Img.bullet = new Image();
     Img.bullet.src = '/client/img/bullet.png';
-    Img.map = new Image();
-    Img.map.src = '/client/img/map.png';
+    Img.map = {};
+    Img.map['village'] = new Image();
+    Img.map['village'].src = '/client/img/map.png';
+    Img.map['alt'] = new Image();
+    Img.map['alt'].src = '/client/img/map2.png';
 
     const game = document.querySelector('#game');
     const canvas = document.querySelector('#canvas');
-    const ctx = canvas.getContext("2d");
-    ctx.font = '30px Arial';
+    const ctx = canvas.getContext('2d');
+    const ui = document.querySelector('#ui');
+    const ctxUi = ui.getContext('2d');
+    ctxUi.font = '30px Arial';
 
     class Player {
         constructor(initPack) {
@@ -121,9 +133,12 @@ From Ollie:
             this.hp = initPack.hp;
             this.maxHp = initPack.maxHp;
             this.score = initPack.score;
+            this.map = initPack.map;
         }
 
         draw() {
+            if (Player.list[selfId].map !== this.map) return;
+
             const width = Img.player.width;
             const height = Img.player.height;
 
@@ -144,9 +159,12 @@ From Ollie:
             this.id = initPack.id;
             this.x = initPack.x;
             this.y = initPack.y;
+            this.map = initPack.map;
         }
 
         draw() {
+            if (Player.list[selfId].map !== this.map) return;
+
             const width = Img.bullet.width / 2;
             const height = Img.bullet.height / 2;
 
@@ -211,15 +229,23 @@ From Ollie:
     }, 1000 / fps);
 
     const drawMap = () => {
-        const x = WIDTH / 2 - Player.list[selfId].x;
-        const y = HEIGHT / 2 - Player.list[selfId].y;
+        const player = Player.list[selfId];
+        const x = WIDTH / 2 - player.x;
+        const y = HEIGHT / 2 - player.y;
 
-        ctx.drawImage(Img.map, x, y);
+        ctx.drawImage(Img.map[player.map], x, y);
     }
 
+    let lastScore;
+
     const drawScore = () => {
-        ctx.fillStyle = 'white';
-        ctx.fillText(Player.list[selfId].score, 0, 30);
+        // TODO: Research if socket.on() event is better or call function on event
+        const score = Player.list[selfId].score
+        if (lastScore === score) return;
+        ctxUi.clearRect(0, 0, ui.width, ui.height);
+        ctxUi.fillStyle = 'white';
+        ctxUi.fillText(score, 0, 30);
+        lastScore = score;
     }
 
     // here because it's associated with game, not login
