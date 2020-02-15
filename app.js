@@ -15,9 +15,8 @@ const io = require('socket.io')(http);
 const SOCKET_LIST = {}; // {[id: socket, id: socket, id: socket]}
 const fps = 50;
 
-http.listen(2000, () => {
-    console.log("Server started.");
-});
+http.listen(process.env.PORT || 2000);
+console.log("Server started.");
 
 class Entity {
     constructor(id) {
