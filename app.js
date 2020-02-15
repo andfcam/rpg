@@ -46,6 +46,7 @@ class Entity {
 class Player extends Entity {
     constructor(data) {
         super({ id: data.id, map: data.map });
+        this.username = data.username;
         this.maxSpeed = 5;
         this.pressingUp = false;
         this.pressingDown = false;
@@ -55,7 +56,6 @@ class Player extends Entity {
         this.mouseAngle = 0;
         this.hp = 10;
         this.maxHp = 10;
-        this.score = 0;
 
         this.init();
     }
@@ -96,12 +96,13 @@ class Player extends Entity {
             y: this.y,
             hp: this.hp,
             maxHp: this.maxHp,
-            score: this.score,
             map: this.map
             // and other initial information such as sprite
         }
     }
 
+    // TODO: Idea: create a global updatePack variable like init and remove, only push necessary data to it
+    // If any of the three packs are empty, don't emit
     getUpdatePack() {
         // TODO: Check if value has changed before sending info
         // TODO: Compression?
@@ -110,7 +111,7 @@ class Player extends Entity {
             x: this.x,
             y: this.y,
             hp: this.hp,
-            score: this.score
+            map: this.map
         }
     }
 
@@ -120,14 +121,19 @@ class Player extends Entity {
 // TODO: Player and bullet lists are only populated with people in same map (and vicinity later)
 Player.list = {}; // // { [id: {player} ] }
 
-Player.onConnect = (socket) => {
+// All socket events we want available AFTER logging in 
+Player.onConnect = (socket, username) => {
+    SOCKET_LIST[socket.id] = socket;
+
     let map = 'village';
     if (Math.random() < 0.5) map = 'alt';
-    const player = new Player({ id: socket.id, map: map });
 
-    console.log(`User ${socket.id} connected.`);
+    const player = new Player({ id: socket.id, username: username, map: map });
 
-    socket.emit('addToChat', `Hi, ${player.id}. Welcome to the game.`);
+    socket.on('changeMap', () => {
+        if (player.map === 'village') player.map = 'alt';
+        else player.map = 'village';
+    });
 
     socket.on('keyPress', (event) => {
         switch (event.action) {
@@ -140,11 +146,46 @@ Player.onConnect = (socket) => {
         }
     });
 
+    socket.on('sendMessage', (message) => {
+        for (const id in SOCKET_LIST) {
+            SOCKET_LIST[id].emit('addMessage', `${player.username}: ${message}`);
+        }
+    });
+
+    socket.on('sendPM', (data) => {
+        let recipientSocket = null;
+        for (const id in Player.list) {
+            if (Player.list[id].username === data.username) {
+                recipientSocket = SOCKET_LIST[id];
+            }
+        }
+        if (recipientSocket === null) {
+            socket.emit('addMessage', `The player '${data.username}' is not online.`);
+        } else {
+            socket.emit('addPM', `To ${data.username}: ${data.message}`); 
+            recipientSocket.emit('addPM', `From ${player.username}: ${data.message}`);
+        }
+    });
+
+    socket.on('debug', (message) => { // TODO: Remove debug function or sanitise input
+        if (!DEBUG) return;
+        socket.emit('addToConsole', eval(message));
+    });
+
+    socket.on('disconnect', () => {
+        Player.onDisconnect(socket, player.username);
+        delete SOCKET_LIST[socket.id];
+    });
+
     socket.emit('init', {
         self: socket.id,
         players: Player.getInitPack(),
         bullets: Bullet.getInitPack()
     });
+
+    socket.emit('addMessage', `Hi, ${player.username}. Welcome to the game.`);
+
+    console.log(`User ${player.username} connected.`);
 }
 
 Player.getInitPack = () => {
@@ -155,11 +196,11 @@ Player.getInitPack = () => {
     return players;
 }
 
-Player.onDisconnect = (socket) => {
+Player.onDisconnect = (socket, username) => {
     removePack.players.push({ id: socket.id });
-    delete Player.list[socket.id]; // TODO: Player disconnects even if never connected (logged in)
+    delete Player.list[socket.id];
 
-    console.log(`User ${socket.id} disconnected.`);
+    console.log(`User ${username} disconnected.`);
 }
 
 Player.update = () => {
@@ -206,8 +247,6 @@ class Bullet extends Entity {
                 player.hp--;
 
                 if (player.hp <= 0) {
-                    const shooter = Player.list[this.parentId];
-                    if (shooter) shooter.score++;
                     player.hp = player.maxHp;
                     player.x = Math.random() * 500;
                     player.y = Math.random() * 500;
@@ -287,14 +326,14 @@ const addUser = (data, callback) => {
     });
 }
 
+// All socket events we want available BEFORE logging in
 io.on('connection', (socket) => {
     socket.id = Math.floor(100 * Math.random()); // TODO: Make id equal to user id
-    SOCKET_LIST[socket.id] = socket;
 
     socket.on('signIn', (data) => {
         isValidPassword(data, (res) => {
             if (res) {
-                Player.onConnect(socket);
+                Player.onConnect(socket, data.username);
                 socket.emit('signInResponse', { success: true });
             } else {
                 socket.emit('signInResponse', { success: false });
@@ -312,22 +351,6 @@ io.on('connection', (socket) => {
                 });
             }
         });
-    });
-
-    socket.on('sendToChat', (message) => {
-        for (const id in SOCKET_LIST) {
-            SOCKET_LIST[id].emit('addToChat', `${socket.id}: ${message}`);
-        }
-    });
-
-    socket.on('debug', (message) => { // TODO: Remove debug function or sanitise input
-        if (!DEBUG) return;
-        socket.emit('addToConsole', eval(message));
-    });
-
-    socket.on('disconnect', () => {
-        Player.onDisconnect(socket);
-        delete SOCKET_LIST[socket.id];
     });
 });
 

@@ -6,6 +6,7 @@
 <!-- 
     Drawing text on canvas very expensive 
     Look further into profiling
+    Scaling on canvas additional to resize?
 -->
 
 <html lang="en">
@@ -34,7 +35,9 @@
         <div id="game" class="hidden">
             <div id="display">
                 <canvas id="canvas" width="500" height="500"></canvas> <!-- TODO: Move width and height to CSS -->
-                <canvas id="ui" width="500" height="500"></canvas> <!-- TODO: Move width and height to CSS -->
+                <div id="ui">
+                    <button id="change-map">Change Map</button>
+                </div>
             </div>
 
             <div id="chat">
@@ -90,21 +93,42 @@
     const chatForm = document.querySelector('#chat-form');
     const chatInput = document.querySelector('#chat-input');
 
-    socket.on('addToChat', (message) => {
+    socket.on('addMessage', (message) => {
         chatBox.innerHTML += `<div>${message}</div>`;
+    });
+
+    socket.on('addPM', (message) => {
+        chatBox.innerHTML += `<div class="pm">${message}</div>`;
     });
 
     socket.on('addToConsole', (result) => {
         console.log(result);
     });
 
+    // TODO: Filter empty messages
     chatForm.onsubmit = (event) => {
         event.preventDefault();
-        if (chatInput.value[0] === '/') socket.emit('debug', chatInput.value.slice(1));
-        else socket.emit('sendToChat', chatInput.value);
+
+        if (chatInput.value[0] === '/') {
+            socket.emit('debug', chatInput.value.slice(1));
+        } else if (chatInput.value[0] === '@') {
+            socket.emit('sendPM', {
+                username: chatInput.value.slice(1, chatInput.value.indexOf(' ')), // TODO: Cuts off last character when no space found
+                message: chatInput.value.slice(chatInput.value.indexOf(' ') + 1)
+            });
+        } else {
+            socket.emit('sendMessage', chatInput.value);
+        }
+
         chatInput.value = '';
+        chatInput.blur();
     }
 
+    // ui
+    const mapButton = document.querySelector('#change-map');
+    mapButton.onclick = () => {
+        socket.emit('changeMap');
+    }
 
     // game
     let Img = {};
@@ -121,9 +145,6 @@
     const game = document.querySelector('#game');
     const canvas = document.querySelector('#canvas');
     const ctx = canvas.getContext('2d');
-    const ui = document.querySelector('#ui');
-    const ctxUi = ui.getContext('2d');
-    ctxUi.font = '30px Arial';
 
     class Player {
         constructor(initPack) {
@@ -132,7 +153,6 @@
             this.y = initPack.y;
             this.hp = initPack.hp;
             this.maxHp = initPack.maxHp;
-            this.score = initPack.score;
             this.map = initPack.map;
         }
 
@@ -194,7 +214,7 @@
                 if (object.x !== undefined) player.x = object.x;
                 if (object.y !== undefined) player.y = object.y;
                 if (object.hp !== undefined) player.hp = object.hp;
-                if (object.score !== undefined) player.score = object.score;
+                if (object.map !== undefined) player.map = object.map;
             }
         });
 
@@ -217,7 +237,6 @@
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         drawMap();
-        drawScore();
 
         for (const id in Player.list) {
             Player.list[id].draw();
@@ -236,25 +255,18 @@
         ctx.drawImage(Img.map[player.map], x, y);
     }
 
-    let lastScore;
-
-    const drawScore = () => {
-        // TODO: Research if socket.on() event is better or call function on event
-        const score = Player.list[selfId].score
-        if (lastScore === score) return;
-        ctxUi.clearRect(0, 0, ui.width, ui.height);
-        ctxUi.fillStyle = 'white';
-        ctxUi.fillText(score, 0, 30);
-        lastScore = score;
-    }
-
     // here because it's associated with game, not login
     socket.on('signInResponse', (data) => {
         if (data.success) game.classList.toggle('hidden');
     });
 
     document.onkeydown = (event) => {
-        switch (event.keyCode) {
+        switch (event.keyCode) { 
+            case 13: // TODO: Move to chat or call function
+                if (document.activeElement !== chatInput) {
+                    event.preventDefault(); 
+                    chatInput.focus();
+                } break;
             case 87: socket.emit('keyPress', { action: 'up', value: true }); break;
             case 83: socket.emit('keyPress', { action: 'down', value: true }); break;
             case 65: socket.emit('keyPress', { action: 'left', value: true }); break;
@@ -284,6 +296,10 @@
         const y = -(canvas.height / 2) + event.clientY;
         const angle = Math.atan2(y, x) / Math.PI * 180;
         socket.emit('keyPress', { action: 'aim', value: angle });
+    }
+
+    document.oncontextmenu = (event) => {
+        event.preventDefault();
     }
 </script>
 
