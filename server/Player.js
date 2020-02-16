@@ -1,5 +1,7 @@
 const Entity = require('./Entity');
 const Bullet = require('./Bullet');
+const Inventory = require('./Inventory')
+const Item = require('./Item');
 
 class Player extends Entity {
     constructor(data) {
@@ -8,13 +10,14 @@ class Player extends Entity {
         this.socket = data.socket;
         this.hp = 10;
         this.maxHp = 10;
-        this.maxSpeed = 5;
+        this.maxSpeed = 3;
         this.pressingUp = false;
         this.pressingDown = false;
         this.pressingLeft = false;
         this.pressingRight = false;
         this.pressingAttack = false;
         this.mouseAngle = 0;
+        this.inventory = new Inventory(this.socket);
 
         this.init();
     }
@@ -31,6 +34,7 @@ class Player extends Entity {
         if (this.pressingAttack) {
             // for (let i = -1; i <= 1; i++) this.shootBullet(i * 10 + this.mouseAngle); // 3-pronged attack
             this.shootBullet(this.mouseAngle);
+            this.pressingAttack = false;
         }
     }
 
@@ -45,7 +49,8 @@ class Player extends Entity {
     }
 
     shootBullet(angle) {
-        const bullet = new Bullet({ parentId: this.id, x: this.x, y: this.y, angle: angle, map: this.map });
+        new Bullet({ parentId: this.id, x: this.x, y: this.y, angle: angle, map: this.map });
+        if (Math.random() < 0.1) this.inventory.addItem('potion', 1);
     }
 
     getInitPack() {
@@ -76,10 +81,26 @@ class Player extends Entity {
 
     // All socket events we want available AFTER logging in 
     static onConnect = (socket, username) => {
-        let map = 'village';
-        if (Math.random() < 0.5) map = 'alt';
+        const player = new Player({ socket: socket, id: socket.id, username: username });
 
-        const player = new Player({ socket: socket, id: socket.id, username: username, map: map });
+        socket.emit('init', {
+            self: socket.id,
+            players: Player.getInitPacks(),
+            bullets: Bullet.getInitPacks()
+        });
+
+        socket.emit('addMessage', `Hi, ${player.username}. Welcome to the game.`);
+
+        console.log(`User ${player.username} connected.`);
+
+        socket.on('useItem', (id) => {
+            if (!player.inventory.hasItem(id, 1)) {
+                console.log(`You don't have that item.`);
+                return;
+            }
+            const item = Item.list[id];
+            item.event(player);
+        });
 
         socket.on('changeMap', () => {
             if (player.map === 'village') player.map = 'alt';
@@ -107,7 +128,7 @@ class Player extends Entity {
             let recipientSocket = null;
             for (const id in Player.list) {
                 if (Player.list[id].username === data.username) {
-                    recipientSocket = Player.list[id];
+                    recipientSocket = Player.list[id].socket;
                 }
             }
             if (recipientSocket === null) {
@@ -129,16 +150,6 @@ class Player extends Entity {
 
             console.log(`User ${player.username} disconnected.`);
         });
-
-        socket.emit('init', {
-            self: socket.id,
-            players: Player.getInitPacks(),
-            bullets: Bullet.getInitPacks()
-        });
-
-        socket.emit('addMessage', `Hi, ${player.username}. Welcome to the game.`);
-
-        console.log(`User ${player.username} connected.`);
     }
 
     // TODO: Player and bullet lists are only populated with people in same map (and vicinity later)

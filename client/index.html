@@ -1,18 +1,21 @@
 <!-- Implement
     1. Change callback functions to promises (look up how to write) -> function.then
     2. Convert obj lists to arrays and loop through with https://zellwk.com/blog/looping-through-js-objects/
+    3. Set height and width attributes on entities for drawing and collision?
 -->
 
 <!-- Oliver
     1. Modules, import, export, babel... HELP.
     2. Questions on paper.
     3. Creating a new class / file, when.
+    4. Packs on Entity are separate, List appears to share?
  -->
 
 <!-- Notes
     Drawing text on canvas very expensive 
     Look further into profiling
     Scaling on canvas additional to resize?
+    Can't return in forEach
 -->
 
 <html lang="en">
@@ -24,6 +27,8 @@
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
     <link rel="stylesheet" href="/client/style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
+    <script src="/client/js/Item.js"></script>
+    <script src="/client/js/Inventory.js"></script>
     <title>Game</title>
 </head>
 
@@ -33,7 +38,7 @@
             <h1>RPG Game</h1>
             <input id="username" type="text" placeholder="username">
             <input id="password" type="password" placeholder="password">
-            <button id="sign-in">Sign In</button>
+            <button id="sign-in" type="submit">Sign In</button>
             <p>Don't have an account?</p>
             <a id="sign-up">Sign Up Here</a>
         </div>
@@ -43,13 +48,14 @@
                 <canvas id="canvas" width="500" height="500"></canvas> <!-- TODO: Move width and height to CSS -->
                 <div id="ui">
                     <button id="change-map">Change Map</button>
+                    <div id="inventory"></div>
                 </div>
             </div>
 
             <div id="chat">
                 <div id="chat-box"></div>
                 <form id="chat-form" action="" autocomplete="off">
-                    <input id="chat-input" type="text">
+                    <input id="chat-input" type="text" placeholder="Hit Enter to chat">
                 </form>
             </div>
         </div>
@@ -57,10 +63,8 @@
 </body>
 
 <script>
-    const WIDTH = 500;
-    const HEIGHT = 500;
-    const socket = io();
     const fps = 50; // TODO: Client and server both require fps (or can be different values - only used for draw on client-side)
+    const socket = io();
 
     // login
 
@@ -131,10 +135,18 @@
     }
 
     // ui
+    const ui = document.querySelector('#ui');
     const mapButton = document.querySelector('#change-map');
+
     mapButton.onclick = () => {
         socket.emit('changeMap');
     }
+
+    const inventory = new Inventory(socket);
+    socket.on('updateInventory', (items) => {
+        inventory.items = items;
+        inventory.refreshRender();
+    });
 
     // game
     let Img = {};
@@ -152,6 +164,29 @@
     const canvas = document.querySelector('#canvas');
     const ctx = canvas.getContext('2d');
 
+    let WIDTH;
+    let HEIGHT;
+    const OFFSETUI = 250;
+
+    window.onresize = () => {
+        resizeCanvas();
+    }
+
+    resizeCanvas = () => {
+        WIDTH = window.innerWidth;
+        HEIGHT = window.innerHeight - OFFSETUI;
+
+        canvas.width = WIDTH;
+        canvas.height = HEIGHT;
+
+        // After altering canvas, ctx settings are removed -> must reapply
+        ctx.mozImageSmoothingEnabled = false;
+        ctx.msImageSmoothingEnabled = false;
+        ctx.imageSmoothingEnabled = false;
+    }
+
+    resizeCanvas();
+
     class Player {
         constructor(initPack) {
             this.id = initPack.id;
@@ -165,16 +200,18 @@
         draw() {
             if (Player.list[selfId].map !== this.map) return;
 
-            const width = Img.player.width;
-            const height = Img.player.height;
+            const width = Img.player.width * 2;
+            const height = Img.player.height * 2;
 
             const x = this.x - Player.list[selfId].x + WIDTH / 2;
             const y = this.y - Player.list[selfId].y + HEIGHT / 2;
 
             // TODO: Remove hard-coded values
-            const hpWidth = 30 * this.hp / this.maxHp;
+            const hpWidth = 40 * this.hp / this.maxHp;
             ctx.fillStyle = "red";
-            ctx.fillRect(x - hpWidth / 2, y - 30, hpWidth, 4);
+            ctx.fillRect(x - 20, y - 36, hpWidth, 4);
+            ctx.strokeStyle = 'black';
+            ctx.strokeRect(x - 20, y - 36, 40, 4);
 
             ctx.drawImage(Img.player, 0, 0, Img.player.width, Img.player.height, x - width / 2, y - height / 2, width, height);
         }
@@ -191,8 +228,8 @@
         draw() {
             if (Player.list[selfId].map !== this.map) return;
 
-            const width = Img.bullet.width / 2;
-            const height = Img.bullet.height / 2;
+            const width = Img.bullet.width;
+            const height = Img.bullet.height;
 
             const x = this.x - Player.list[selfId].x + WIDTH / 2;
             const y = this.y - Player.list[selfId].y + HEIGHT / 2;
@@ -257,8 +294,8 @@
         const player = Player.list[selfId];
         const x = WIDTH / 2 - player.x;
         const y = HEIGHT / 2 - player.y;
-
-        ctx.drawImage(Img.map[player.map], x, y);
+        var map = Img.map[player.map];
+        ctx.drawImage(Img.map[player.map], x, y, map.width * 2, map.height * 2);
     }
 
     // here because it's associated with game, not login
@@ -267,12 +304,12 @@
     });
 
     document.onkeydown = (event) => {
-        switch (event.keyCode) { 
+        if (document.activeElement === chatInput) return;
+        switch (event.keyCode) {
             case 13: // TODO: Move to chat or call function
-                if (document.activeElement !== chatInput) {
-                    event.preventDefault(); 
-                    chatInput.focus();
-                } break;
+                event.preventDefault();
+                chatInput.focus();
+                break;
             case 87: socket.emit('keyPress', { action: 'up', value: true }); break;
             case 83: socket.emit('keyPress', { action: 'down', value: true }); break;
             case 65: socket.emit('keyPress', { action: 'left', value: true }); break;
@@ -289,7 +326,7 @@
         }
     }
 
-    document.onmousedown = (event) => {
+    canvas.onmousedown = (event) => {
         socket.emit('keyPress', { action: 'attack', value: true });
     }
 
@@ -297,9 +334,9 @@
         socket.emit('keyPress', { action: 'attack', value: false });
     }
 
-    document.onmousemove = (event) => {
-        const x = -(canvas.width / 2) + event.clientX;
-        const y = -(canvas.height / 2) + event.clientY;
+    canvas.onmousemove = (event) => {
+        const x = event.clientX - canvas.getBoundingClientRect().left - canvas.width / 2;
+        const y = event.clientY - canvas.getBoundingClientRect().top - canvas.height / 2;
         const angle = Math.atan2(y, x) / Math.PI * 180;
         socket.emit('keyPress', { action: 'aim', value: angle });
     }
@@ -307,6 +344,7 @@
     document.oncontextmenu = (event) => {
         event.preventDefault();
     }
+
 </script>
 
 </html>

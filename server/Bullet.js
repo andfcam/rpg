@@ -6,8 +6,8 @@ class Bullet extends Entity {
             id: Math.random(),
             x: data.x,
             y: data.y,
-            speedX: Math.cos(data.angle / 180 * Math.PI) * 10,
-            speedY: Math.sin(data.angle / 180 * Math.PI) * 10,
+            speedX: Math.cos(data.angle / 180 * Math.PI) * 5,
+            speedY: Math.sin(data.angle / 180 * Math.PI) * 5,
             map: data.map
         });
 
@@ -26,7 +26,7 @@ class Bullet extends Entity {
 
     update() {
         if (this.age++ > 100) this.remove();
-        
+
         super.update();
     }
 

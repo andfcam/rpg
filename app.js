@@ -1,5 +1,5 @@
-const Player = require('./Player');
-const Bullet = require('./Bullet');
+const Player = require('./server/Player');
+const Bullet = require('./server/Bullet');
 
 const mongojs = require('mongojs');
 const db = mongojs('mongodb+srv://Admin:KWwIrPRC09RjK3wt@a67-gqim1.mongodb.net/myGame?retryWrites=true&w=majority', ['account', 'progress']);
@@ -15,10 +15,7 @@ app.use('/client', express.static(__dirname + '/client'));
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
 
-// const profiler = require('v8-profiler-node8');
-// const fs = require('fs');
-
-const SOCKET_LIST = {}; // {[id: socket, id: socket, id: socket]}
+const SOCKET_LIST = {};
 const fps = 50;
 
 http.listen(process.env.PORT || 2000);
@@ -134,17 +131,20 @@ const handleCollisions = () => {
     }
 }
 
-const startProfiling = (duration) => {
-    profiler.startProfiling('1', true);
-    setTimeout(() => {
-        const profile1 = profiler.stopProfiling('1');
+// const profiler = require('v8-profiler-node8');
+// const fs = require('fs');
 
-        profile1.export((err, res) => {
-            fs.writeFileSync('./profile.cpuprofile', res);
-            profile1.delete();
-            console.log('Profile saved.');
-        });
-    }, duration);
-}
+// const startProfiling = (duration) => {
+//     profiler.startProfiling('1', true);
+//     setTimeout(() => {
+//         const profile1 = profiler.stopProfiling('1');
+
+//         profile1.export((err, res) => {
+//             fs.writeFileSync('./profile.cpuprofile', res);
+//             profile1.delete();
+//             console.log('Profile saved.');
+//         });
+//     }, duration);
+// }
 
 // startProfiling(15000);
