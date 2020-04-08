@@ -121,9 +121,7 @@ const handleCollisions = () => {
             if (bullet.parentId !== player.id && bullet.map === player.map && bullet.getDistance(player) < 30) {
                 player.hp--;
                 if (player.hp <= 0) {
-                    player.hp = player.maxHp;
-                    player.x = Math.random() * 500;
-                    player.y = Math.random() * 500;
+                    respawn(player);
                 }
                 bullet.remove();
             }
@@ -131,6 +129,11 @@ const handleCollisions = () => {
     }
 }
 
+const respawn = (player) => {
+    player.hp = player.maxHp;
+    player.x = Math.random() * 500 + 1000;
+    player.y = Math.random() * 500 + 1250;
+}
 // const profiler = require('v8-profiler-node8');
 // const fs = require('fs');
 

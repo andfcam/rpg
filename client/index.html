@@ -40,23 +40,25 @@
             <input id="password" type="password" placeholder="password">
             <button id="sign-in" type="submit">Sign In</button>
             <p>Don't have an account?</p>
-            <a id="sign-up">Sign Up Here</a>
+            <a id="sign-up">Sign Up</a>
         </div>
 
         <div id="game" class="hidden">
             <div id="display">
                 <canvas id="canvas" width="500" height="500"></canvas> <!-- TODO: Move width and height to CSS -->
-                <div id="ui">
-                    <button id="change-map">Change Map</button>
-                    <div id="inventory"></div>
-                </div>
             </div>
-
-            <div id="chat">
-                <div id="chat-box"></div>
-                <form id="chat-form" action="" autocomplete="off">
-                    <input id="chat-input" type="text" placeholder="Hit Enter to chat">
-                </form>
+            <div id="ui">
+                <div id="chat">
+                    <div id="chat-box"></div>
+                    <form id="chat-form" action="" autocomplete="off">
+                        <input id="chat-input" type="text" placeholder="Hit Enter to chat">
+                    </form>
+                </div>
+                <div id="menu">
+                    <h2>Inventory</h2>
+                    <div id="inventory"></div>
+                    <!-- <button id="change-map">Change Map</button> -->
+                </div>
             </div>
         </div>
     </main>
@@ -138,9 +140,9 @@
     const ui = document.querySelector('#ui');
     const mapButton = document.querySelector('#change-map');
 
-    mapButton.onclick = () => {
-        socket.emit('changeMap');
-    }
+    // mapButton.onclick = () => {
+    //     socket.emit('changeMap');
+    // }
 
     const inventory = new Inventory(socket);
     socket.on('updateInventory', (items) => {

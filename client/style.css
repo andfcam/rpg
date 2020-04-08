@@ -84,13 +84,13 @@ a {
 }
 
 #ui {
-    position: absolute;
-    z-index: 1;
+    display: flex;
 }
 
 #chat {
-    min-width: 110px;
+    min-width: 240px;
     width: 100%;
+    margin-right: 10px;
 }
 
 #chat input {
@@ -109,6 +109,11 @@ a {
     border: 1px solid black;
     background-color: white;
     overflow-y: scroll;
+}
+
+#menu {
+    min-width: 240px;
+    height: 100%;
 }
 
 .hidden {

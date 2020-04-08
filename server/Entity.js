@@ -1,8 +1,8 @@
 class Entity {
     constructor(data) {
         this.id = data.id;
-        this.x = data.x || 250;
-        this.y = data.y || 250;
+        this.x = data.x || 1250;
+        this.y = data.y || 1500;
         this.speedX = data.speedX || 0;
         this.speedY = data.speedY || 0;
         this.map = data.map || 'village';
